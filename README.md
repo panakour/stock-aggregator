@@ -8,10 +8,11 @@ First of all, you need the following services running on your local/server envir
 1. PHP >= 8.2 with the PHP extensions required by Laravel 11 (see: [Laravel Server Requirements](https://laravel.com/docs/11.x/deployment#server-requirements))
 2. MySQL/MariaDB
 3. Redis
+4. node & npm to build the assets and be able to view the dashboard. Thanks to vite the build process is superfast ;)
 
-In my every day routine I use my own php contenirize env https://github.com/panakour/phpdock which let me have multiple php versions at the same time with nginx and php-fpm.
+In my daily routine I use my own php containerized environment https://github.com/panakour/phpdock which let me have multiple php versions at the same time with nginx and php-fpm.
 
-In the end for this project for simplicity, I will create a docker and docker compose specificaly for this project if you want.
+In the end for this project for simplicity if I have the time, I will create a docker and docker compose specifically for this project.
 
 ### Steps to run this project
 
@@ -36,8 +37,9 @@ To start fetching prices, you should have a supervisor for your job processing o
 In the scheduler, I have registered a job that runs every minute.  
 This scheduled job calls the AlphaVantage API to get the latest prices for all 10 seeded stock items.
 
-Because I ran into trouble with the AlphaVantage API limit (up to 25 requests per day), I refactored the `FetchStockPrice` job to not depend on the AlphaVantage class directly but on a `Fetcher` interface. I also implemented a `FakeFetcher` that returns a random number, allowing me to proceed without being blocked by the API limit.  
-With this change, it is now easy to swap in any price fetcher (not only the AlphaVantageFetcher) without modifying the internal job processing logic.
+Because I ran into trouble with the AlphaVantage API limit (Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans), I refactored the `FetchStockPrice` job to not depend on the AlphaVantage concrete class directly but on the `Fetcher` interface.
+Doing so I was able to implement another fetcher `FakeFetcher` that returns a random number. This is let me proceed and test the app without being blocked by the API limit.  
+One important part here is that now is easy to swap to any price fetcher (not only the AlphaVantageFetcher) without modifying the internal logic.
 
 If you want to use the fake fetcher, run `php artisan app:fetch-fake-prices`. Since it dispatches the same queue job, you should also have a running worker.
 
@@ -69,3 +71,43 @@ Some useful commands (ideally run in CI/CD) to ensure code quality and as less b
   ![tests-phpstan.png](docs/tests-phpstan.png)
 
 I am also using Laravel Pint for linting, which you can run with `composer lint`.
+
+
+## Docker
+I have created a fully containerized environment to be able this project with all the needed services
+
+#### steps for up and running
+```shel
+docker compose up -d
+docker compose exec php composer install
+docker compose exec php php artisan key:generate
+docker compose exec php php artisan migrate
+docker compose exec php php artisan db:seed StockSeeder
+```
+
+To run the test use the cmd `docker compose exec php php artisan test` and for phpstan `docker compose exec php composer analyse`
+
+#### Data fetching:
+In the docker a Supervisor was configured to execute the queue service worker, so if you have Alpha Vantage API configured is going to start automatically to fetch prices from there every minute.
+
+otherwise execute the faker 2-3 or more times to get some prices in the history just for demonstration.
+```shel
+docker compose exec php php artisan app:fetch-fake-prices
+docker compose exec php php artisan app:fetch-fake-prices
+docker compose exec php php artisan app:fetch-fake-prices
+```
+
+#### View web app
+The listened port for this container is the 8080. 
+
+The available urls you can access:
+- http://localhost:8080/api/stocks
+- http://localhost:8080/api/stocks/{symbol}
+- http://localhost:8080/dashboard
+
+#### for troubleshooting you can have a look at the bellow logs:
+- [queue-worker.log](storage/logs/queue-worker.log)
+- [cron.log](storage/logs/cron.log)
+- [laravel.log](storage/logs/laravel.log)
+
+also you can view the laravel horizon at http://localhost:8080/horizon

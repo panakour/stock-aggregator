@@ -1,0 +1,89 @@
+services:
+    php:
+        build:
+            context: docker
+            dockerfile: Dockerfile-php
+        volumes:
+            - ./:/var/www/html
+        depends_on:
+            - mariadb
+            - redis
+        networks:
+            - app_network
+
+    nginx:
+        build:
+            context: docker
+            dockerfile: Dockerfile-nginx
+        ports:
+            - "8080:80"
+        depends_on:
+            - php
+        volumes:
+            - ./:/var/www/html
+        networks:
+            - app_network
+
+    mariadb:
+        image: mariadb:latest
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: stock_aggregator
+            MYSQL_USER: default
+            MYSQL_PASSWORD: secret
+        volumes:
+            - mysql_data:/var/lib/mysql
+        networks:
+            - app_network
+        ports:
+            - "3306:3306"
+
+    redis:
+        image: redis:latest
+        networks:
+            - app_network
+
+    queue:
+        build:
+            context: docker
+            dockerfile: Dockerfile-php
+        command: supervisord -c /etc/supervisor/conf.d/supervisord.conf
+        volumes:
+            - ./:/var/www/html
+        depends_on:
+            - php
+            - mariadb
+            - redis
+        networks:
+            - app_network
+
+    scheduler:
+        build:
+            context: docker
+            dockerfile: Dockerfile-php
+        command: cron -f
+        volumes:
+            - ./:/var/www/html
+        depends_on:
+            - php
+            - mariadb
+            - redis
+        networks:
+            - app_network
+
+    node:
+        build:
+            context: docker
+            dockerfile: Dockerfile-node
+        volumes:
+            - ./:/var/www/html
+        working_dir: /var/www/html
+        command: ["sh", "-c", "npm install && npm run build"]
+        networks:
+            - app_network
+
+networks:
+    app_network:
+
+volumes:
+    mysql_data:

@@ -1,0 +1,30 @@
+FROM composer:2 AS composer
+
+FROM php:8.3-fpm
+
+ENV PATH="/root/.composer/vendor/bin:$PATH"
+
+COPY --from=composer /usr/bin/composer /usr/bin/composer
+
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    unzip \
+    supervisor \
+    cron \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN install-php-extensions redis intl pdo_mysql opcache pcntl bcmath zip gd exif apcu
+
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+COPY crontab /etc/cron.d/laravel
+RUN chmod 0644 /etc/cron.d/laravel
+RUN crontab /etc/cron.d/laravel
+
+WORKDIR /var/www/html
+
+CMD ["php-fpm"]
