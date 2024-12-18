@@ -22,6 +22,13 @@ class StockPrice extends Component
     {
         $data = $this->repository->getLatestPrices($this->symbol);
 
+        if (! isset($data['symbol'])) {
+            return view('components.stock-price-empty', [
+                'symbol' => $this->symbol,
+                'name' => $this->name,
+            ]);
+        }
+
         return view('components.stock-price', [
             'symbol' => $data['symbol'],
             'name' => $this->name,

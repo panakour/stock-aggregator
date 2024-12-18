@@ -61,5 +61,4 @@ class DashboardControllerTest extends TestCase
         $response = $this->get('/dashboard');
         $response->assertSee('AAPL');
     }
-
 }
