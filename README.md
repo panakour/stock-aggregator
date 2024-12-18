@@ -49,6 +49,18 @@ I'm using Redis for caching to make the application scalable and efficient under
 I've implemented the caching layer in a standalone class [StockCache.php](app/Services/StockCache.php) to make it fully testable and ensure the application's accuracy. This separation of concerns allows for better testing reusability and maintenance of the caching logic.
 I did the same as well for [PercentageChangeCalculator.php](app/Services/PercentageChangeCalculator.php)
 
+#### Database Structure
+![db_diagram.png](docs/db_diagram.png)
+
+The application uses two tables:
+- `stocks`: Stores the basic stock information (symbol and name)
+- `stock_prices`: Records price history with timestamps
+    - Each price record is linked to a stock via `stock_id`
+    - Includes `fetched_at` timestamp to track when each price was obtained
+
+The relationship between these tables allows us to track historical price data for each stock.
+
+
 If you want to use the fake fetcher, run `php artisan app:fetch-fake-prices`. Since it dispatches the same queue job, you should also have a running worker.
 
 After you have some pricing data, you can explore what is implemented.
