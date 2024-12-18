@@ -38,9 +38,16 @@ To start fetching prices, you should have a supervisor for your job processing o
 In the scheduler, I have registered a job that runs every minute.  
 This scheduled job calls the AlphaVantage API to get the latest prices for my 10 chosen seeded stock items.
 
-Because I ran into trouble with the AlphaVantage API limit (Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans), I refactored the [FetchStockPrice.php](app/Jobs/FetchStockPrice.php) job to not depend on the AlphaVantage concrete class directly but on the `Fetcher` interface.
+Because I ran into trouble with the AlphaVantage API limit (Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans), I refactored the [FetchStockPrice.php](app/Jobs/FetchStockPrice.php) job to not depend on the AlphaVantage concrete class directly but on the [Fetcher.php](app/Fetchers/Fetcher.php) interface.
 Doing so I was able to implement another fetcher `FakeFetcher` that returns a random number. This is let me proceed and test the app without being blocked by the API limit.  
 One important part here is that now is easy to swap to any price fetcher (not only the AlphaVantageFetcher) without modifying the internal logic.
+
+After each fetch operation, I cache the data (see [FetchStockPrice.php](https://github.com/panakour/stock-aggregator/blob/main/app/Jobs/FetchStockPrice.php#L58))
+to ensure end users get the fastest possible response when using the endpoints and dashboard.
+I'm using Redis for caching to make the application scalable and efficient under high load.
+
+I've implemented the caching layer in a standalone class [StockCache.php](app/Services/StockCache.php) to make it fully testable and ensure the application's accuracy. This separation of concerns allows for better testing reusability and maintenance of the caching logic.
+I did the same as well for [PercentageChangeCalculator.php](app/Services/PercentageChangeCalculator.php)
 
 If you want to use the fake fetcher, run `php artisan app:fetch-fake-prices`. Since it dispatches the same queue job, you should also have a running worker.
 
