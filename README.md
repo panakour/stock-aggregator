@@ -28,6 +28,7 @@ In the end for this project for simplicity if I have the time, I will create a d
     - `npm install && npm run build`
     - Run the Scheduler `php artisan schedule:work`
     - Run the job to fetch prices from Alpha Vantage API `php artisan queue:work`
+    - or the fake fetcher using the command `php artisan app:fetch-fake-prices`
 
 ...and you are ready to go.
 
@@ -35,9 +36,9 @@ In the end for this project for simplicity if I have the time, I will create a d
 ### More details about fetching of stock price data
 To start fetching prices, you should have a supervisor for your job processing or run `php artisan queue:work`.  
 In the scheduler, I have registered a job that runs every minute.  
-This scheduled job calls the AlphaVantage API to get the latest prices for all 10 seeded stock items.
+This scheduled job calls the AlphaVantage API to get the latest prices for my 10 chosen seeded stock items.
 
-Because I ran into trouble with the AlphaVantage API limit (Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans), I refactored the `FetchStockPrice` job to not depend on the AlphaVantage concrete class directly but on the `Fetcher` interface.
+Because I ran into trouble with the AlphaVantage API limit (Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans), I refactored the [FetchStockPrice.php](app/Jobs/FetchStockPrice.php) job to not depend on the AlphaVantage concrete class directly but on the `Fetcher` interface.
 Doing so I was able to implement another fetcher `FakeFetcher` that returns a random number. This is let me proceed and test the app without being blocked by the API limit.  
 One important part here is that now is easy to swap to any price fetcher (not only the AlphaVantageFetcher) without modifying the internal logic.
 
@@ -47,8 +48,8 @@ After you have some pricing data, you can explore what is implemented.
 
 You can view two endpoints: `/api/stocks` and `/api/stocks/{symbol}` which return JSON.
 
-Keep in mind the images below might not reflect accurate data, as the prices may come from the fake fetcher.  
-The first endpoint returns a list of stock items, cached indefinitely since no changes are needed:  
+Keep in mind the images below dot not have accurate prices data, as the prices are fetched using the fake fetcher.  
+The first endpoint returns a list of stock items, cached indefinitely (Look at the Cache::forever in [StockSeeder.php](database/seeders/StockSeeder.php)) since no changes are needed:  
 ![img_1.png](/docs/img_1.png)
 
 The second endpoint takes a symbol and returns the latest price, percentage change, and the previous price:  
@@ -59,13 +60,13 @@ This page uses Alpine.js, and I have also added an interval that updates automat
 `setInterval(() => this.fetchPrice(), 60000);`
 ![dashboard.png](docs/dashboard.png)
 
-***Notes:*** Initially, I developed this project using PHP 8.4 since I like the latest versions. However, I faced some issues using Laravel Pint, so I switched to PHP 8.3.
+***Notes:*** Initially, I developed this project using PHP 8.4 since I always like to use the latest versions. However, I faced some issues using Laravel Pint, so I switched to PHP 8.3.
 
 #### Other tools I have installed and configured:
 - phpstan with Larastan for code analysis
 - Horizon for troubleshooting and observing the queues (access it at `/horizon`)
 
-Some useful commands (ideally run in CI/CD) to ensure code quality and as less bug ass possible before deployment:
+Some useful commands (ideally run in CI/CD) to ensure code quality and as less bug as possible before deployment:
 - To run tests: `php artisan test`
 - To run phpstan: `composer analyse`
   ![tests-phpstan.png](docs/tests-phpstan.png)
